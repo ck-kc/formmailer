@@ -1,6 +1,13 @@
 const EWS = require('node-ews');
 const dotenv = require('dotenv');
+const express = require("express")
+const bodyParser = require("body-parser")
+const EventEmitter = require('events');
 dotenv.config();
+
+class MyEmitter extends EventEmitter {}
+
+const myEmitter = new MyEmitter();
 
 // exchange server connection info
 const ewsConfig = {

@@ -16,11 +16,19 @@ const ewsConfig = {
   host: process.env.HOST
 };
 
+// define custom soap header
+const ewsSoapHeader = {
+  't:RequestServerVersion': {
+    attributes: {
+      Version: "Exchange2013_SP1"
+    }
+  }
+};
+
 // initialize node-ews
 const ews = new EWS(ewsConfig);
 
-// define ews api function
-const ewsFunction = 'CreateItem';
+
 
 // Initialize express and define a port
 const app = express()
@@ -39,9 +47,148 @@ app.post("/hook", (req, res) => {
 })
 
 
+async function getItems(searchResult) {
+
+  const ewsFunction = 'GetItem';
+
+  let messageArray = searchResult.ResponseMessages.FindItemResponseMessage.RootFolder.Items.Message;
+  console.log(messageArray);
+
+  let idList = messageArray.map(x => x.ItemId.attributes.Id);
+  console.log(idList);
+
+  const ewsArgs = {
+    "ItemShape": {
+      "BaseShape" : "Default",
+    },
+    "ItemIds": {
+      idList
+    },
+    "ParentFolderIds": {
+      "DistinguishedFolderId": {
+        "attributes": {
+          "Id": "inbox"
+        }
+      }
+    },
+  };
+
+  ews.run(ewsFunction, ewsArgs, ewsSoapHeader)
+    .then(result => {
+      console.log(JSON.stringify(result));
+
+
+      res.send(JSON.stringify(result));
+      res.status(200).end();
+    })
+    .catch(err => {
+      console.log(err.stack);
+      res.status(500).end();
+    });
+
+}
+
+app.get("/getitems2", (req, res) => {
+
+  // define ews api function
+  const ewsFunction = 'FindItem';
+
+  const ewsArgs = {
+    "attributes" : {
+      "Traversal" : "Shallow"
+    },
+    "ItemShape": {
+      "BaseShape" : "IdOnly",
+      "AdditionalProperties": {
+        "FieldURI": {
+          "attributes" : {
+            "FieldURI": "item:Subject",
+          }
+        }
+      }
+    },
+    "ParentFolderIds": {
+      "DistinguishedFolderId": {
+        "attributes": {
+          "Id": "inbox"
+        }
+      }
+    },
+    "QueryString" : "subject:FormMailerRecord"
+  };
+
+  console.log('Someone is requesting items');
+  console.log(req.headers);
+
+  ews.run(ewsFunction, ewsArgs, ewsSoapHeader)
+    .then(result => {
+      console.log(JSON.stringify(result));
+      getItems(result);
+
+      res.send(JSON.stringify(result));
+      res.status(200).end();
+    })
+    .catch(err => {
+      console.log(err.stack);
+      res.status(500).end();
+    });
+
+})
+
+
+app.get("/getitems", (req, res) => {
+
+  // define ews api function
+  const ewsFunction = 'FindItem';
+
+  const ewsArgs = {
+    "attributes" : {
+      "Traversal" : "Shallow"
+    },
+    "ItemShape": {
+      "BaseShape" : "IdOnly",
+      "AdditionalProperties": {
+        "FieldURI": {
+          "attributes" : {
+            "FieldURI": "item:Subject",
+          }
+        }
+      }
+    },
+    "ParentFolderIds": {
+      "DistinguishedFolderId": {
+        "attributes": {
+          "Id": "inbox"
+        }
+      }
+    },
+    "QueryString" : "subject:FormMailerRecord"
+  };
+
+  console.log('Someone is requesting items');
+  console.log(req.headers);
+
+  ews.run(ewsFunction, ewsArgs, ewsSoapHeader)
+    .then(result => {
+      console.log(JSON.stringify(result));
+
+      res.send(JSON.stringify(result));
+      res.status(200).end();
+    })
+    .catch(err => {
+      console.log(err.stack);
+      res.status(500).end();
+    });
+
+})
+
+
 myEmitter.on('sendemail', function(requestBody) {
   console.log('someone sent a request!');
   console.log('sending email');
+
+  // define ews api function
+  const ewsFunction = 'CreateItem';
 
   // define ews api function args
   const ewsArgs = {
@@ -58,7 +205,7 @@ myEmitter.on('sendemail', function(requestBody) {
     "Items" : {
       "Message" : {
         "ItemClass": "IPM.Note",
-        "Subject" : "Test EWS Email",
+        "Subject" : "FormMailerRecord " + requestBody.form_data,
         "Body" : {
           "attributes": {
             "BodyType" : "Text"
@@ -67,7 +214,7 @@ myEmitter.on('sendemail', function(requestBody) {
         },
         "ToRecipients" : {
           "Mailbox" : {
-            "EmailAddress" : "gashackdummy@gmail.com"
+            "EmailAddress" : process.env.USERNAME
           }
         },
         "IsRead": "false"
