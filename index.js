@@ -39,7 +39,7 @@ const ewsArgs = {
       },
       "ToRecipients" : {
         "Mailbox" : {
-          "EmailAddress" : "c.razavi@nhs.net"
+          "EmailAddress" : process.env.USERNAME
         }
       },
       "IsRead": "false"
